@@ -239,62 +239,66 @@ const [imageFile, setImageFile] = useState(null);
     fetchMasterSheetData();
   }, []);
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const diffInDays = (end - start) / (1000 * 60 * 60 * 24);
+useEffect(() => {
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffInDays = (end - start) / (1000 * 60 * 60 * 24);
 
-      let frequencies = [];
-      if (diffInDays >= 365) {
-        frequencies = [
-          "one-time",
-          "Daily",
-          "Weekly",
-          "Monthly",
-          "Quarterly",
-          "Half Yearly",
-          "Yearly",
-        ];
-      } else if (diffInDays >= 180) {
-        frequencies = [
-          "one-time",
-          "Daily",
-          "Weekly",
-          "Monthly",
-          "Quarterly",
-          "Half Yearly",
-        ];
-      } else if (diffInDays >= 90) {
-        frequencies = ["one-time", "Daily", "Weekly", "Monthly", "Quarterly"];
-      } else if (diffInDays >= 30) {
-        frequencies = ["one-time", "Daily", "Weekly", "Monthly"];
-      } else if (diffInDays >= 7) {
-        frequencies = ["one-time", "Daily", "Weekly"];
-      } else if (diffInDays > 0) {
-        frequencies = ["one-time", "Daily"];
-      }
-
-      setAvailableFrequencies(frequencies);
-    } else {
-      setAvailableFrequencies([]);
+    let frequencies = [];
+    if (diffInDays >= 365) {
+      frequencies = [
+        "one-time",
+        "Daily",
+        "Weekly",
+        "15 Days",
+        "Monthly",
+        "Quarterly",
+        "Half Yearly",
+        "Yearly",
+      ];
+    } else if (diffInDays >= 180) {
+      frequencies = [
+        "one-time",
+        "Daily",
+        "Weekly",
+        "15 Days",
+        "Monthly",
+        "Quarterly",
+        "Half Yearly",
+      ];
+    } else if (diffInDays >= 90) {
+      frequencies = ["one-time", "Daily", "Weekly", "15 Days", "Monthly", "Quarterly"];
+    } else if (diffInDays >= 30) {
+      frequencies = ["one-time", "Daily", "Weekly", "15 Days", "Monthly"];
+    } else if (diffInDays >= 15) {
+      frequencies = ["one-time", "Daily", "Weekly", "15 Days"];
+    } else if (diffInDays >= 7) {
+      frequencies = ["one-time", "Daily", "Weekly"];
+    } else if (diffInDays > 0) {
+      frequencies = ["one-time", "Daily"];
     }
-  }, [startDate, endDate]);
+
+    setAvailableFrequencies(frequencies);
+  } else {
+    setAvailableFrequencies([]);
+  }
+}, [startDate, endDate]);
 
   // NEW: Function to combine date and time into DD/MM/YYYY HH:MM:SS format
-  const formatDateTimeForStorage = (date, time) => {
-    if (!date || !time) return "";
+ const formatDateTimeForStorage = (date, time) => {
+  if (!date || !time) return "";
 
-    const d = new Date(date);
-    const day = d.getDate().toString().padStart(2, "0");
-    const month = (d.getMonth() + 1).toString().padStart(2, "0");
-    const year = d.getFullYear();
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
 
     // Time is already in HH:MM format, just add :00 for seconds
     const timeWithSeconds = time + ":00";
 
-    return `${day}/${month}/${year} ${timeWithSeconds}`;
-  };
+  return `${day}/${month}/${year} ${time}`;
+};
 
   // UPDATED: Date formatting function to return DD/MM/YYYY format (for working days comparison)
   const formatDateToDDMMYYYY = (date) => {
@@ -402,11 +406,10 @@ const [imageFile, setImageFile] = useState(null);
     if (
       !startDate ||
       !endDate ||
-      !startTime ||
       (selectedTaskType === "Maintence" ? !frequency : !endTaskDate)
     ) {
       toast.error(
-        "Please fill in all required fields including date range, time and frequency"
+        "Please fill in all required fields including date range and frequency"
       );
       return;
     }
@@ -452,53 +455,56 @@ const [imageFile, setImageFile] = useState(null);
       });
     }
     // For recurring tasks
-    else {
-      let currentDate = new Date(startDateObj);
-      let taskCount = 0;
-      const maxTasks = 1000; // Safety limit
+  else {
+    let currentDate = new Date(startDateObj);
+    let taskCount = 0;
+    const maxTasks = 1000; // Safety limit
 
-      while (currentDate <= endDateObj && taskCount < maxTasks) {
-        const currentDateStr = formatDateToDDMMYYYY(currentDate);
+    while (currentDate <= endDateObj && taskCount < maxTasks) {
+      const currentDateStr = formatDateToDDMMYYYY(currentDate);
 
-        if (workingDays.includes(currentDateStr)) {
-          tasks.push({
-            description,
-            givenBy: selectedGivenBy,
-            doer: selectedDoerName,
-            dueDate: formatDateTimeForStorage(currentDate, time),
-            status: "pending",
-            frequency,
-          });
-          taskCount++;
-        }
+      if (workingDays.includes(currentDateStr)) {
+        tasks.push({
+          description,
+          givenBy: selectedGivenBy,
+          doer: selectedDoerName,
+          dueDate: formatDateTimeForStorage(currentDate, time),
+          status: "pending",
+          frequency,
+        });
+        taskCount++;
+      }
 
-        // Calculate next date based on frequency
-        switch (frequency.toLowerCase()) {
-          case "daily":
-            currentDate = addDays(currentDate, 1);
-            break;
-          case "weekly":
-            currentDate = addDays(currentDate, 7);
-            break;
-          case "monthly":
-            currentDate = addMonths(currentDate, 1);
-            break;
-          case "quarterly":
-            currentDate = addMonths(currentDate, 3);
-            break;
-          case "half yearly":
-          case "half-yearly":
-            currentDate = addMonths(currentDate, 6);
-            break;
-          case "yearly":
-            currentDate = addYears(currentDate, 1);
-            break;
-          default:
-            currentDate = addDays(currentDate, 1); // Default to daily
-            break;
-        }
+      // Calculate next date based on frequency
+      switch (frequency.toLowerCase()) {
+        case "daily":
+          currentDate = addDays(currentDate, 1);
+          break;
+        case "weekly":
+          currentDate = addDays(currentDate, 7);
+          break;
+        case "15 days":
+          currentDate = addDays(currentDate, 15);
+          break;
+        case "monthly":
+          currentDate = addMonths(currentDate, 1);
+          break;
+        case "quarterly":
+          currentDate = addMonths(currentDate, 3);
+          break;
+        case "half yearly":
+        case "half-yearly":
+          currentDate = addMonths(currentDate, 6);
+          break;
+        case "yearly":
+          currentDate = addYears(currentDate, 1);
+          break;
+        default:
+          currentDate = addDays(currentDate, 1); // Default to daily
+          break;
       }
     }
+  }
 
     // Show results
     if (tasks.length === 0) {
