@@ -517,101 +517,116 @@ const Tasks = () => {
   const SHEET_Id = "1lE5TdGcbmwVcVqbx-jftPIdmoGgg1DApNn4t9jZvGN8";
 
   // Fetch tasks function moved outside useEffect
-  const fetchTasks = async (page = 1, isLoadMore = false) => {
-    if (!isLoadMore) {
-      setLoadingTasks(true);
+ const fetchTasks = async (page = 1, isLoadMore = false) => {
+  if (!isLoadMore) {
+    setLoadingTasks(true);
+  } else {
+    setLoadingMore(true);
+  }
+  setError(null);
+
+  try {
+    console.log(`📡 Fetching tasks for page ${page}`, { isLoadMore });
+
+    // 🔗 Build URLs
+    const maintenanceURL = `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Maitenance%20Task%20Assign&page=${page}&pageSize=1000`;
+    const repairURL = `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Repair%20Task%20Assign&page=${page}&pageSize=1000`;
+
+    // 🕵️ Debug URLs
+    console.log("🔗 Maintenance URL:", maintenanceURL);
+    console.log("🔗 Repair URL:", repairURL);
+
+    // 🌐 Fetch data
+    const [maintenanceRes, repairRes] = await Promise.all([
+      axios.get(maintenanceURL),
+      axios.get(repairURL),
+    ]);
+
+    // 📝 Debug API responses
+    console.log("🔧 Maintenance API Meta:", {
+      success: maintenanceRes.data.success,
+      rowCount: maintenanceRes.data.rowCount,
+      page: maintenanceRes.data.page,
+      pageSize: maintenanceRes.data.pageSize,
+      totalPages: maintenanceRes.data.totalPages,
+    });
+
+    console.log("🔨 Repair API Meta:", {
+      success: repairRes.data.success,
+      rowCount: repairRes.data.rowCount,
+      page: repairRes.data.page,
+      pageSize: repairRes.data.pageSize,
+      totalPages: repairRes.data.totalPages,
+    });
+
+    // ========== Maintenance ==========
+    if (maintenanceRes.data.success && maintenanceRes.data.table) {
+      const formattedMaintenance = formatSheetData(maintenanceRes.data.table);
+      console.log(`📊 Formatted ${formattedMaintenance.length} maintenance records`);
+
+      const processedMaintenance =
+        getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedMaintenance);
+      console.log(`⚡ Processed to ${processedMaintenance.length} unique maintenance tasks`);
+
+      if (isLoadMore) {
+        setMaintenanceTasks((prev) => {
+          console.log(`📈 Adding ${processedMaintenance.length} to existing ${prev.length} maintenance tasks`);
+          return [...prev, ...processedMaintenance];
+        });
+      } else {
+        setMaintenanceTasks(processedMaintenance);
+        console.log(`🆕 Set ${processedMaintenance.length} initial maintenance tasks`);
+      }
+
+      // Update pagination info
+      setTotalRows(maintenanceRes.data.rowCount || 0);
+      setTotalPages(maintenanceRes.data.totalPages || 1);
+      setCurrentPage(page);
+      setHasMore(page < (maintenanceRes.data.totalPages || 1));
+
+      console.log(
+        `📄 Pagination Update - Page: ${page}, Total Pages: ${maintenanceRes.data.totalPages}, Has More: ${
+          page < (maintenanceRes.data.totalPages || 1)
+        }`
+      );
     } else {
-      setLoadingMore(true);
+      console.warn("⚠️ No maintenance data received from API");
     }
-    setError(null);
-    
-    try {
-      console.log(`📡 Fetching tasks for page ${page}`, { isLoadMore });
-      
-      const [maintenanceRes, repairRes] = await Promise.all([
-        axios.get(
-          `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Maitenance%20Task%20Assign&page=${page}&pageSize=100`
-        ),
-        axios.get(
-          `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Repair%20Task%20Assign&page=${page}&pageSize=100`
-        ),
-      ]);
 
-      console.log('🔧 Maintenance API Response:', {
-        success: maintenanceRes.data.success,
-        rowCount: maintenanceRes.data.rowCount,
-        totalPages: maintenanceRes.data.totalPages,
-        page: maintenanceRes.data.page,
-        hasData: !!maintenanceRes.data.table
-      });
-      console.log('🔨 Repair API Response:', {
-        success: repairRes.data.success,
-        rowCount: repairRes.data.rowCount,
-        totalPages: repairRes.data.totalPages,
-        page: repairRes.data.page,
-        hasData: !!repairRes.data.table
-      });
+    // ========== Repair ==========
+    if (repairRes.data.success && repairRes.data.table) {
+      const formattedRepair = formatSheetData(repairRes.data.table);
+      console.log(`📊 Formatted ${formattedRepair.length} repair records`);
 
-      if (maintenanceRes.data.success && maintenanceRes.data.table) {
-        const formattedMaintenance = formatSheetData(maintenanceRes.data.table);
-        console.log(`📊 Formatted ${formattedMaintenance.length} maintenance records`);
-        
-        const processedMaintenance = getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedMaintenance);
-        console.log(`⚡ Processed to ${processedMaintenance.length} unique maintenance tasks`);
-        
-        if (isLoadMore) {
-          setMaintenanceTasks(prev => {
-            console.log(`📈 Adding ${processedMaintenance.length} to existing ${prev.length} maintenance tasks`);
-            return [...prev, ...processedMaintenance];
-          });
-        } else {
-          setMaintenanceTasks(processedMaintenance);
-          console.log(`🆕 Set ${processedMaintenance.length} initial maintenance tasks`);
-        }
-        
-        // Update pagination info
-        setTotalRows(maintenanceRes.data.rowCount || 0);
-        setTotalPages(maintenanceRes.data.totalPages || 1);
-        setCurrentPage(page);
-        setHasMore(page < (maintenanceRes.data.totalPages || 1));
-        
-        console.log(`📄 Pagination Update - Page: ${page}, Total Pages: ${maintenanceRes.data.totalPages}, Has More: ${page < (maintenanceRes.data.totalPages || 1)}`);
+      const processedRepair =
+        getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedRepair);
+      console.log(`⚡ Processed to ${processedRepair.length} unique repair tasks`);
+
+      if (isLoadMore) {
+        setRepairTasks((prev) => {
+          console.log(`📈 Adding ${processedRepair.length} to existing ${prev.length} repair tasks`);
+          return [...prev, ...processedRepair];
+        });
       } else {
-        console.warn('⚠️ No maintenance data received from API');
+        setRepairTasks(processedRepair);
+        console.log(`🆕 Set ${processedRepair.length} initial repair tasks`);
       }
-
-      if (repairRes.data.success && repairRes.data.table) {
-        const formattedRepair = formatSheetData(repairRes.data.table);
-        console.log(`📊 Formatted ${formattedRepair.length} repair records`);
-        
-        const processedRepair = getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedRepair);
-        console.log(`⚡ Processed to ${processedRepair.length} unique repair tasks`);
-        
-        if (isLoadMore) {
-          setRepairTasks(prev => {
-            console.log(`📈 Adding ${processedRepair.length} to existing ${prev.length} repair tasks`);
-            return [...prev, ...processedRepair];
-          });
-        } else {
-          setRepairTasks(processedRepair);
-          console.log(`🆕 Set ${processedRepair.length} initial repair tasks`);
-        }
-      } else {
-        console.warn('⚠️ No repair data received from API');
-      }
-
-    } catch (error) {
-      console.error("❌ Error fetching tasks:", error);
-      setError(`Failed to load tasks: ${error.message}`);
-    } finally {
-      if (!isLoadMore) {
-        setLoadingTasks(false);
-      } else {
-        setLoadingMore(false);
-      }
-      console.log(`✅ Fetch completed for page ${page}`);
+    } else {
+      console.warn("⚠️ No repair data received from API");
     }
-  };
+  } catch (error) {
+    console.error("❌ Error fetching tasks:", error);
+    setError(`Failed to load tasks: ${error.message}`);
+  } finally {
+    if (!isLoadMore) {
+      setLoadingTasks(false);
+    } else {
+      setLoadingMore(false);
+    }
+    console.log(`✅ Fetch completed for page ${page}`);
+  }
+};
+
 
   // Load more tasks function
   const loadMoreTasks = async () => {
@@ -711,6 +726,8 @@ const Tasks = () => {
   };
 
   const rawTasks = activeTab === "maintenance" ? maintenanceTasks : repairTasks;
+
+  console.log("rawTasks",rawTasks);
 
   const filteredTasks = rawTasks.filter((task) => {
     if (!task) return false;
