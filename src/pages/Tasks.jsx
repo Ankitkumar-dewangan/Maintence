@@ -530,10 +530,10 @@ const Tasks = () => {
       
       const [maintenanceRes, repairRes] = await Promise.all([
         axios.get(
-          `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Maitenance%20Task%20Assign&page=${page}&pageSize=1000`
+          `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Maitenance%20Task%20Assign&page=${page}&pageSize=100`
         ),
         axios.get(
-          `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Repair%20Task%20Assign&page=${page}&pageSize=1000`
+          `${SCRIPT_URL}?sheetId=${SHEET_Id}&sheet=Repair%20Task%20Assign&page=${page}&pageSize=100`
         ),
       ]);
 
