@@ -564,11 +564,8 @@ const Tasks = () => {
       const formattedMaintenance = formatSheetData(maintenanceRes.data.table);
       console.log(`📊 Formatted ${formattedMaintenance.length} maintenance records`);
 
-      // const processedMaintenance =
-      //   getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedMaintenance);
-      // NEW (direct raw data show karega)
-const processedMaintenance = formattedMaintenance;
-
+      const processedMaintenance =
+        getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedMaintenance);
       console.log(`⚡ Processed to ${processedMaintenance.length} unique maintenance tasks`);
 
       if (isLoadMore) {
@@ -601,10 +598,8 @@ const processedMaintenance = formattedMaintenance;
       const formattedRepair = formatSheetData(repairRes.data.table);
       console.log(`📊 Formatted ${formattedRepair.length} repair records`);
 
-      // const processedRepair =
-      //   getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedRepair);
-      const processedRepair = formattedRepair;
-
+      const processedRepair =
+        getFirstPendingOrLatestCompletedPerMachineAndSerial(formattedRepair);
       console.log(`⚡ Processed to ${processedRepair.length} unique repair tasks`);
 
       if (isLoadMore) {
@@ -671,41 +666,23 @@ const processedMaintenance = formattedMaintenance;
   };
 
   // Initial fetch
-  // useEffect(() => {
-  //   console.log('🎬 Component mounted, fetching initial data');
-  //   fetchTasks(1, false);
-  // }, []);
-
-  // Auto fetch all pages one by one
-useEffect(() => {
-  const fetchAllPages = async () => {
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      await fetchTasks(page, page > 1); // page > 1 means loadMore
-      page++;
-      hasMore = page <= totalPages; // totalPages ko har fetch ke baad set kiya ja raha h
-    }
-  };
-
-  console.log("🎬 Component mounted, fetching ALL pages");
-  fetchAllPages();
-}, []);
-
+  useEffect(() => {
+    console.log('🎬 Component mounted, fetching initial data');
+    fetchTasks(1, false);
+  }, []);
 
   // Scroll listener
-  // useEffect(() => {
-  //   const container = tableContainerRef.current;
-  //   if (container) {
-  //     console.log('🎧 Adding scroll listener');
-  //     container.addEventListener('scroll', handleScroll);
-  //     return () => {
-  //       console.log('🔇 Removing scroll listener');
-  //       container.removeEventListener('scroll', handleScroll);
-  //     };
-  //   }
-  // }, [hasMore, loadingMore, currentPage]);
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (container) {
+      console.log('🎧 Adding scroll listener');
+      container.addEventListener('scroll', handleScroll);
+      return () => {
+        console.log('🔇 Removing scroll listener');
+        container.removeEventListener('scroll', handleScroll);
+      };
+    }
+  }, [hasMore, loadingMore, currentPage]);
 
   const formatSheetData = (sheetData) => {
     console.log('🔄 Processing sheet data:', sheetData);
